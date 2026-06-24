@@ -9,10 +9,16 @@ class CustomUser(AbstractUser):
         ('staff', "Xodim"),
     ]
 
-    # Ism va Familiya AbstractUser ichida tayyor bor,
-    # lekin majburiy qilish yoki boshqarish uchun bu yerda ham ko'rsatish mumkin:
     first_name = models.CharField(max_length=150, verbose_name="Ismi")
     last_name = models.CharField(max_length=150, verbose_name="Familiyasi")
+
+    # Noyob ID raqami (Skaner qilinadigan yoki qo'lda teriladigan ID)
+    staff_id = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="ID raqami (Karta/Guvohnoma)",
+        help_text="Masalan: T-1002, S-4501, 0012345"
+    )
 
     role = models.CharField(
         max_length=20,
@@ -26,7 +32,7 @@ class CustomUser(AbstractUser):
     )
 
     def __str__(self):
-        return f"{self.get_full_name()} ({self.get_role_display()})"
+        return f"{self.staff_id} - {self.get_full_name()} ({self.get_role_display()})"
 
 
 class DailySchedule(models.Model):
@@ -39,7 +45,6 @@ class DailySchedule(models.Model):
         (5, 'Shanba'),
         (6, 'Yakshanba'),
     ]
-    # Endi profillar yo'q, to'g'ridan-to'g'ri CustomUser'ga bog'laymiz
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='schedules')
     day_of_week = models.IntegerField(choices=WEEKDAYS, verbose_name="Hafta kuni")
     expected_hours = models.PositiveIntegerField(verbose_name="Ushbu kundagi ish vaqti (soat)")
