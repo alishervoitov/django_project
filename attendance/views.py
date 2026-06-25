@@ -3,6 +3,8 @@ from django.contrib import messages
 from django.utils import timezone
 from .models import CustomUser, DailySchedule, Attendance
 from datetime import datetime
+from django.contrib.auth.decorators import user_passes_test
+from django.db.models import Count, Sum
 
 
 def check_id_attendance(request):
@@ -87,3 +89,66 @@ def check_id_attendance(request):
         return redirect('check_id_page')
 
     return render(request, 'attendance/check_id.html')
+
+
+
+# Faqat admin (staff) foydalanuvchilarni kiritish uchun himoya
+@user_passes_test(lambda u: u.is_staff, login_url='/admin/login/')
+def admin_dashboard(request):
+    today = timezone.now().date()
+
+    # 1. Umumiy statistikalar
+    total_users = CustomUser.objects.filter(is_active=True).count()
+    attended_today = Attendance.objects.filter(date=today).count()
+    late_today = Attendance.objects.filter(date=today, late_minutes__gt=0).count()
+    left_early_today = Attendance.objects.filter(date=today, early_out_minutes__gt=0).count()
+
+    # Kelmaganlar soni
+    absent_today = total_users - attended_today
+    if absent_today < 0: absent_today = 0
+
+    # 2. Hafta kuni bo'yicha filtr mantiqi
+    weekday_filter = request.GET.get('weekday')
+    attendances = Attendance.objects.all().select_related('user')
+
+    if weekday_filter is not None and weekday_filter != '':
+        # Django hafta kuni: 1=Yakshanba, 2=Dushanba, ..., 7=Shanba
+        django_weekday = (int(weekday_filter) + 1) % 7 + 1
+        attendances = attendances.filter(date__weekday=django_weekday)
+
+    # Oxirgi davomatlarni tepaga chiqarish
+    attendances = attendances.order_by('-date', '-check_in')
+
+    # Daqiqani soat va daqiqaga aylantirish (HTML ichida ishlatish uchun)
+    for att in attendances:
+        # Ishlagan vaqti
+        if att.minutes_spent > 0:
+            h, m = att.minutes_spent // 60, att.minutes_spent % 60
+            att.readable_spent = f"{h}s {m}d" if h > 0 else f"{m}d"
+        else:
+            att.readable_spent = "-"
+
+        # Kechikish vaqti
+        if att.late_minutes > 0:
+            h, m = att.late_minutes // 60, att.late_minutes % 60
+            att.readable_late = f"{h}s {m}d" if h > 0 else f"{m}d"
+        else:
+            att.readable_late = None
+
+        # Erta ketish vaqti
+        if att.early_out_minutes > 0:
+            h, m = att.early_out_minutes // 60, att.early_out_minutes % 60
+            att.readable_early = f"{h}s {m}d" if h > 0 else f"{m}d"
+        else:
+            att.readable_early = None
+
+    context = {
+        'total_users': total_users,
+        'attended_today': attended_today,
+        'late_today': late_today,
+        'absent_today': absent_today,
+        'left_early_today': left_early_today,
+        'attendances': attendances,
+        'current_filter': weekday_filter,
+    }
+    return render(request, 'attendance/dashboard.html', context)

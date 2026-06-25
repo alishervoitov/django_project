@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Davomat Tizimi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: #2c3e50 !important; }
+        .card-stat { border: none; border-radius: 12px; transition: transform 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .card-stat:hover { transform: translateY(-3px); }
+        .table-container { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4 shadow">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold" href="#"><i class="bi bi-shield-check text-success me-2"></i>DAVOMAT CONTROL</a>
+        <div class="d-flex">
+            <a href="{% url 'check_id_page' %}" target="_blank" class="btn btn-outline-light btn-sm me-2"><i class="bi bi-cpu me-1"></i> Terminalni ochish</a>
+            <a href="/admin/" class="btn btn-success btn-sm"><i class="bi bi-sliders me-1"></i> Django Admin</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid px-4">
+    <h2 class="fw-bold text-dark mb-4"><i class="bi bi-speedometer2 me-2"></i>Boshqaruv Paneli</h2>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-stat bg-white text-dark p-3 border-start border-primary border-5">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted small text-uppercase">Jami Xodimlar</h6>
+                        <h3 class="fw-bold mb-0">{{ total_users }}</h3>
+                    </div>
+                    <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary"><i class="bi bi-people fs-3"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-stat bg-white text-dark p-3 border-start border-success border-5">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted small text-uppercase">Bugun Kelganlar</h6>
+                        <h3 class="fw-bold mb-0">{{ attended_today }}</h3>
+                    </div>
+                    <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success"><i class="bi bi-person-check fs-3"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-stat bg-white text-dark p-3 border-start border-danger border-5">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted small text-uppercase">Bugun Kechikkanlar</h6>
+                        <h3 class="fw-bold text-danger mb-0">{{ late_today }}</h3>
+                    </div>
+                    <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger"><i class="bi bi-clock-history fs-3"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-stat bg-white text-dark p-3 border-start border-warning border-5">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted small text-uppercase">Kelmaganlar (Bugun)</h6>
+                        <h3 class="fw-bold text-warning mb-0">{{ absent_today }}</h3>
+                    </div>
+                    <div class="bg-warning bg-opacity-10 p-3 rounded-circle text-warning"><i class="bi bi-person-x fs-3"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container mb-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <h4 class="fw-bold m-0 text-secondary"><i class="bi bi-journal-text me-2"></i>Davomat Jurnali</h4>
+
+            <form method="GET" action="" class="d-flex align-items-center gap-2">
+                <label class="text-muted small text-nowrap m-0 fw-bold">Hafta kuni:</label>
+                <select name="weekday" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 150px;">
+                    <option value="">Hamma kunlar</option>
+                    <option value="0" {% if current_filter == '0' %}selected{% endif %}>Dushanba</option>
+                    <option value="1" {% if current_filter == '1' %}selected{% endif %}>Seshanba</option>
+                    <option value="2" {% if current_filter == '2' %}selected{% endif %}>Chorshanba</option>
+                    <option value="3" {% if current_filter == '3' %}selected{% endif %}>Payshanba</option>
+                    <option value="4" {% if current_filter == '4' %}selected{% endif %}>Juma</option>
+                    <option value="5" {% if current_filter == '5' %}selected{% endif %}>Shanba</option>
+                    <option value="6" {% if current_filter == '6' %}selected{% endif %}>Yakshanba</option>
+                </select>
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID raqam</th>
+                        <th>Xodim / Talaba</th>
+                        <th>Roli</th>
+                        <th>Sana</th>
+                        <th>Kelgan vaqti</th>
+                        <th>Ketgan vaqti</th>
+                        <th>Ishlagan vaqti</th>
+                        <th>Kechikish</th>
+                        <th>Erta ketish</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for att in attendances %}
+                    <tr>
+                        <td class="fw-bold text-secondary">{{ att.user.staff_id }}</td>
+                        <td class="fw-bold">{{ att.user.get_full_name }}</td>
+                        <td>
+                            <span class="badge {% if att.user.role == 'teacher' %}bg-purple text-dark style='background-color:#e1bfc7' {% elif att.user.role == 'student' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                                {{ att.user.get_role_display }}
+                            </span>
+                        </td>
+                        <td>{{ att.date|date:"Y-m-d" }}</td>
+                        <td class="text-success fw-bold">{{ att.check_in|time:"H:i:s" }}</td>
+                        <td class="text-danger fw-bold">{% if att.check_out %}{{ att.check_out|time:"H:i:s" }}{% else %}-{% endif %}</td>
+                        <td><span class="badge bg-light text-dark border px-2 py-1">{{ att.readable_spent }}</span></td>
+                        <td>
+                            {% if att.readable_late %}
+                                <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ att.readable_late }}</span>
+                            </td>
+                            {% else %}
+                                <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Vaqtida</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if att.readable_early %}
+                                <span class="text-warning fw-bold"><i class="bi bi-box-arrow-right me-1"></i>{{ att.readable_early }} erta</span>
+                            {% else %}
+                                <span class="text-success">✔ To'liq</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">Hech qanday davomat ma'lumoti topilmadi.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
