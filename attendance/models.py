@@ -90,7 +90,6 @@ class DailySchedule(models.Model):
         verbose_name_plural = "Kunlik Grafiklar"
 
 
-# 4. DAVOMAT MODELI
 class Attendance(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='attendances')
     date = models.DateField(auto_now_add=True, verbose_name="Sana")

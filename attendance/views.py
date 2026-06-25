@@ -17,7 +17,7 @@ def check_id_attendance(request):
 
         today = timezone.now().date()
         current_time = timezone.now().time()
-        current_weekday = today.weekday()  # 0=Dushanba, ..., 6=Yakshanba
+        current_weekday = today.weekday()
 
         schedule = DailySchedule.objects.filter(user=user, day_of_week=current_weekday).first()
 
