@@ -1,9 +1,10 @@
+from django.contrib.auth import logout, authenticate, login
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.utils import timezone
 from .models import CustomUser, DailySchedule, Attendance
 from datetime import datetime
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib.auth.decorators import user_passes_test, login_required
 from django.db.models import Count, Sum
 
 
@@ -91,54 +92,89 @@ def check_id_attendance(request):
     return render(request, 'attendance/check_id.html')
 
 
-@user_passes_test(lambda u: u.is_staff, login_url='/admin/login/')
+def login_page(request):
+    # Agar admin allaqachon login qilgan bo'lsa, to'g'ridan-to'g'ri dashboardga yuboramiz
+    if request.user.is_authenticated and request.user.is_staff:
+        return redirect('admin_dashboard')
+
+    if request.method == 'POST':
+        staff_id = request.POST.get('staff_id', '').strip()
+        password = request.POST.get('password', '').strip()
+
+        if not staff_id or not password:
+            messages.error(request, "ID raqami va parolni to'liq kiriting!")
+            return render(request, 'attendance/login.html')
+
+        # Djangoning tayyor xavfsiz tekshirish funksiyasi
+        user = authenticate(request, username=staff_id, password=password)
+
+        if user is not None:
+            if user.is_staff:
+                login(request, user)  # Sessiyaga yozish (Login qilish)
+                messages.success(request, f"Xush kelibsiz, {user.get_full_name()}!")
+                return redirect('admin_dashboard')
+            else:
+                messages.error(request, "Sizda boshqaruv paneliga kirish huquqi yo'q! (Faqat adminlar uchun)")
+        else:
+            messages.error(request, "ID raqami yoki parol noto'g'ri!")
+
+    return render(request, 'attendance/login.html')
+
+
+@login_required(login_url='login_page')
 def admin_dashboard(request):
-    today = timezone.now().date()
+    # Xavfsizlik devori: Mabodo oddiy foydalanuvchi link orqali kirmoqchi bo'lsa haydaydi
+    if not request.user.is_staff:
+        messages.error(request, "Sizda ushbu sahifaga ruxsat yo'q!")
+        return redirect('login_page')
 
-    total_users = CustomUser.objects.filter(is_active=True).count()
-    attended_today = Attendance.objects.filter(date=today).count()
-    late_today = Attendance.objects.filter(date=today, late_minutes__gt=0).count()
-    left_early_today = Attendance.objects.filter(date=today, early_out_minutes__gt=0).count()
+    # Filtrlarni olish
+    role_filter = request.GET.get('role', '').strip()
+    weekday_filter = request.GET.get('weekday', '').strip()
 
-    absent_today = total_users - attended_today
-    if absent_today < 0: absent_today = 0
-
-    weekday_filter = request.GET.get('weekday')
     attendances = Attendance.objects.all().select_related('user')
 
-    if weekday_filter is not None and weekday_filter != '':
+    # Rol bo'yicha saralash
+    if role_filter:
+        attendances = attendances.filter(user__role=role_filter)
+
+    # Hafta kuni bo'yicha saralash
+    if weekday_filter != '':
         django_weekday = (int(weekday_filter) + 1) % 7 + 1
         attendances = attendances.filter(date__weekday=django_weekday)
 
     attendances = attendances.order_by('-date', '-check_in')
 
+    # Daqiqalarni chiroyli formatga o'tkazish
     for att in attendances:
+        def to_hours(minutes):
+            if not minutes: return "-"
+            h, m = minutes // 60, minutes % 60
+            return f"{h}soat {m}d" if h > 0 else f"{m}daqiqa"
+        att.readable_spent = to_hours(att.minutes_spent)
+        att.readable_late = to_hours(att.late_minutes) if att.late_minutes > 0 else None
+        att.readable_early = to_hours(att.early_out_minutes) if att.early_out_minutes > 0 else None
 
-        if att.minutes_spent > 0:
-            h, m = att.minutes_spent // 60, att.minutes_spent % 60
-            att.readable_spent = f"{h}s {m}d" if h > 0 else f"{m}d"
-        else:
-            att.readable_spent = "-"
-
-        if att.late_minutes > 0:
-            h, m = att.late_minutes // 60, att.late_minutes % 60
-            att.readable_late = f"{h}s {m}d" if h > 0 else f"{m}d"
-        else:
-            att.readable_late = None
-
-        if att.early_out_minutes > 0:
-            h, m = att.early_out_minutes // 60, att.early_out_minutes % 60
-            att.readable_early = f"{h}s {m}d" if h > 0 else f"{m}d"
-        else:
-            att.readable_early = None
+    # Bugungi umumiy statistika
+    today = timezone.now().date()
+    total_users = CustomUser.objects.filter(is_active=True).count()
+    attended_today = Attendance.objects.filter(date=today).count()
+    late_today = Attendance.objects.filter(date=today, late_minutes__gt=0).count()
+    absent_today = max(0, total_users - attended_today)
 
     context = {
+        'attendances': attendances,
         'total_users': total_users,
         'attended_today': attended_today,
         'late_today': late_today,
         'absent_today': absent_today,
-        'left_early_today': left_early_today,
-        'attendances': attendances,
-        'current_filter': weekday_filter,
+        'current_role': role_filter,
+        'current_weekday': weekday_filter,
     }
     return render(request, 'attendance/dashboard.html', context)
+
+
+def logout_page(request):
+    logout(request)
+    messages.info(request, "Tizimdan muvaffaqiyatli chiqdingiz.")
+    return redirect('login_page')
