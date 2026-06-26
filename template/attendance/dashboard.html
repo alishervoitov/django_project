@@ -13,6 +13,9 @@
         .card-stat:hover { transform: translateY(-3px); }
         .table-container { background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px; }
         .bg-purple { background-color: #e1bfc7 !important; }
+        /* Xodim ismiga sichqoncha olib borilgandagi effekt */
+        .employee-link { color: #212529; text-decoration: none; transition: color 0.15s ease-in-out; }
+        .employee-link:hover { color: #0d6efd !important; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -101,25 +104,7 @@
                     </select>
                 </div>
             </div>
-
-            <div class="col-12 col-sm-4 col-md-3">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text">Hafta kuni:</span>
-                    <select name="weekday" class="form-select" onchange="this.form.submit()">
-                        <option value="">Hamma kunlar</option>
-                        <option value="0" {% if current_weekday == '0' %}selected{% endif %}>Dushanba</option>
-                        <option value="1" {% if current_weekday == '1' %}selected{% endif %}>Seshanba</option>
-                        <option value="2" {% if current_weekday == '2' %}selected{% endif %}>Chorshanba</option>
-                        <option value="3" {% if current_weekday == '3' %}selected{% endif %}>Payshanba</option>
-                        <option value="4" {% if current_weekday == '4' %}selected{% endif %}>Juma</option>
-                        <option value="5" {% if current_weekday == '5' %}selected{% endif %}>Shanba</option>
-                        <option value="6" {% if current_weekday == '6' %}selected{% endif %}>Yakshanba</option>
-                    </select>
-                </div>
-            </div>
-        </form>
-
-        <div class="table-responsive">
+        </form> <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
@@ -138,7 +123,13 @@
                     {% for att in attendances %}
                     <tr>
                         <td class="fw-bold text-secondary">{{ att.user.staff_id }}</td>
-                        <td class="fw-bold">{{ att.user.get_full_name }}</td>
+
+                        <td class="fw-bold">
+                            <a href="{% url 'user_monitoring' att.user.id %}" class="employee-link">
+                                <i class="bi bi-search text-muted me-1 small"></i> {{ att.user.get_full_name }}
+                            </a>
+                        </td>
+
                         <td>
                             <span class="badge {% if att.user.role == 'teacher' %}bg-purple text-dark{% elif att.user.role == 'student' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
                                 {{ att.user.get_role_display }}
@@ -157,7 +148,7 @@
                         </td>
                         <td>
                             {% if att.readable_early and att.readable_early != "-" %}
-                                <span class="text-warning fw-bold"><i class="bi bi-box-arrow-right me-1"></i>{{ att.readable_early }} oldin</span>
+                                <span class="text-warning fw-bold"><i class="bi bi-box-arrow-right me-1"></i>{{ att.readable_early }}</span>
                             {% else %}
                                 <span class="text-success">✔ To'liq</span>
                             {% endif %}

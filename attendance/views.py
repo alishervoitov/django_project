@@ -1,9 +1,12 @@
+import calendar
+
 from django.contrib.auth import logout, authenticate, login
-from django.shortcuts import render, redirect
+from django.db.models import Count, Sum
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 from .models import CustomUser, DailySchedule, Attendance
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.contrib.auth.decorators import user_passes_test, login_required
 
 
@@ -165,3 +168,104 @@ def logout_page(request):
     logout(request)
     messages.info(request, "Tizimdan muvaffaqiyatli chiqdingiz.")
     return redirect('login_page')
+
+
+@login_required(login_url='login_page')
+def user_monitoring(request, user_id):
+    if not request.user.is_staff:
+        messages.error(request, "Sizda ushbu sahifaga ruxsat yo'q!")
+        return redirect('login_page')
+
+    employee = get_object_or_404(CustomUser, id=user_id)
+
+    if timezone.is_aware(timezone.now()):
+        local_now = timezone.localtime(timezone.now())
+    else:
+        local_now = datetime.now()
+
+    today = local_now.date()
+
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+
+    weekly_attendances = Attendance.objects.filter(
+        user=employee,
+        date__range=[start_of_week, end_of_week]
+    ).order_by('date')
+
+    weekly_stats = weekly_attendances.aggregate(
+        days=Count('id'),
+        minutes=Sum('minutes_spent'),
+        late=Sum('late_minutes'),
+        early=Sum('early_out_minutes')
+    )
+
+    year = int(request.GET.get('year', today.year))
+    month = int(request.GET.get('month', today.month))
+
+    _, last_day = calendar.monthrange(year, month)
+    start_of_month = datetime(year, month, 1).date()
+    end_of_month = datetime(year, month, last_day).date()
+
+    monthly_attendances = Attendance.objects.filter(
+        user=employee,
+        date__range=[start_of_month, end_of_month]
+    ).order_by('-date')
+
+    monthly_stats = monthly_attendances.aggregate(
+        days=Count('id'),
+        minutes=Sum('minutes_spent'),
+        late=Sum('late_minutes'),
+        early=Sum('early_out_minutes')
+    )
+
+    def format_to_hours(minutes):
+        if not minutes: return "0 soat"
+        h = minutes // 60
+        m = minutes % 60
+        return f"{h} soat {m} d" if h > 0 else f"{m} daqiqa"
+
+    w_stats = {
+        'days': weekly_stats['days'] or 0,
+        'work_hours': format_to_hours(weekly_stats['minutes']),
+        'late': format_to_hours(weekly_stats['late']),
+        'early': format_to_hours(weekly_stats['early']),
+    }
+
+    m_stats = {
+        'days': monthly_stats['days'] or 0,
+        'work_hours': format_to_hours(monthly_stats['minutes']),
+        'late': format_to_hours(monthly_stats['late']),
+        'early': format_to_hours(monthly_stats['early']),
+    }
+
+    for att in weekly_attendances:
+        att.readable_spent = format_to_hours(att.minutes_spent)
+        att.readable_late = format_to_hours(att.late_minutes) if att.late_minutes > 0 else None
+        att.readable_early = format_to_hours(att.early_out_minutes) if att.early_out_minutes > 0 else None
+
+    for att in monthly_attendances:
+        att.readable_spent = format_to_hours(att.minutes_spent)
+        att.readable_late = format_to_hours(att.late_minutes) if att.late_minutes > 0 else None
+        att.readable_early = format_to_hours(att.early_out_minutes) if att.early_out_minutes > 0 else None
+
+    months_list = [
+        (1, "Yanvar"), (2, "Fevral"), (3, "Mart"), (4, "Aprel"), (5, "May"), (6, "Iyun"),
+        (7, "Iyul"), (8, "Avgust"), (9, "Sentyabr"), (10, "Oktyabr"), (11, "Noyabr"), (12, "Dekabr")
+    ]
+    years_list = [today.year - 1, today.year, today.year + 1]
+
+    context = {
+        'employee': employee,
+        'weekly_attendances': weekly_attendances,
+        'monthly_attendances': monthly_attendances,
+        'w_stats': w_stats,
+        'm_stats': m_stats,
+        'start_of_week': start_of_week,
+        'end_of_week': end_of_week,
+        'current_month': month,
+        'current_year': year,
+        'months_list': months_list,
+        'years_list': years_list,
+    }
+    return render(request, 'attendance/user_monitoring.html', context)
