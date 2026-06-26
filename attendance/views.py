@@ -1,5 +1,4 @@
 import calendar
-
 from django.contrib.auth import logout, authenticate, login
 from django.db.models import Count, Sum
 from django.shortcuts import render, redirect, get_object_or_404
@@ -9,11 +8,9 @@ from .models import CustomUser, DailySchedule, Attendance
 from datetime import datetime, timedelta
 from django.contrib.auth.decorators import user_passes_test, login_required
 
-
 def check_id_attendance(request):
     if request.method == "POST":
         input_id = request.POST.get('staff_id', '').strip()
-
         try:
             user = CustomUser.objects.get(staff_id=input_id, is_active=True)
         except CustomUser.DoesNotExist:
@@ -36,13 +33,11 @@ def check_id_attendance(request):
             return redirect('check_id_page')
 
         expected_minutes = schedule.expected_hours * 60
-
         attendance = Attendance.objects.filter(user=user, date=today).first()
 
         if not attendance:
             scheduled_start = datetime.combine(today, schedule.start_time)
             actual_arrival = datetime.combine(today, current_time)
-
             late_min = 0
             if actual_arrival > scheduled_start:
                 late_min = int((actual_arrival - scheduled_start).total_seconds() / 60)
@@ -159,7 +154,7 @@ def admin_dashboard(request):
         'absent_today': absent_today,
         'current_role': role_filter,
         'current_weekday': weekday_filter,
-        'current_date': date_filter or str(today),  # HTML kalendarda tanlangan sana turishi uchun
+        'current_date': date_filter or str(today),
     }
     return render(request, 'attendance/dashboard.html', context)
 
