@@ -92,8 +92,9 @@ class DailySchedule(models.Model):
 
 class Attendance(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='attendances')
-    date = models.DateField(auto_now_add=True, verbose_name="Sana")
-    check_in = models.TimeField(auto_now_add=True, verbose_name="Kelgan vaqti")
+    date = models.DateField(verbose_name="Sana")
+    check_in = models.TimeField(verbose_name="Kelgan vaqti")
+
     check_out = models.TimeField(null=True, blank=True, verbose_name="Ketgan vaqti")
     minutes_spent = models.PositiveIntegerField(default=0, verbose_name="Ishlagan vaqti (daqiqa)")
     late_minutes = models.PositiveIntegerField(default=0, verbose_name="Kechikish (daqiqa)")
@@ -102,6 +103,7 @@ class Attendance(models.Model):
     class Meta:
         verbose_name = "Davomat"
         verbose_name_plural = "Davomatlar"
+        unique_together = ('user', 'date')
 
     def __str__(self):
         return f"{self.user.get_full_name()} | {self.date}"
