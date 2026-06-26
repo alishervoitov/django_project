@@ -7,7 +7,9 @@ def create_admin_automatically(request):
     User = get_user_model()
     if not User.objects.filter(staff_id="admin").exists():
         User.objects.create_superuser(
-            staff_id="AB080802",
+            staff_id="AB882002",
+            first_name="Alisher",
+            last_name="Voitov",
             password="alisher",
             email="admin@example.com"
         )
