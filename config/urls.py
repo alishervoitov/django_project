@@ -18,7 +18,7 @@ def create_admin_automatically(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('make-admin', create_admin_automatically),
+    path('make-me-admin-please/', create_admin_automatically),
     path('', include('attendance.urls')),
 ]
 
