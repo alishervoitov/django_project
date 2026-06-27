@@ -77,7 +77,7 @@ import dj_database_url
 
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgresql://postgres:RHTcniqq9FcQcUrq@db.rcahtgdyilxdakcxmnmp.supabase.co:5432/postgres',
+        default='postgresql://postgres:RHTcniqq9FcQcUrq@db.rcahtgdyilxdakcxmnmp.supabase.co:6543/postgres',
         conn_max_age=600
     )
 }
